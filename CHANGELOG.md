@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.2 (2026-06-02) — 多租户架构：热加载 + 自动开通
+
+### 新增
+- **`inboxes.json`** — 外部配置文件，WS Agent 每 30 秒检测变化自动热加载，新增 inbox 无需重启
+- **`provision.py`** — 一键开通脚本：自动建 Chatwoot Inbox + QwenPaw Agent + 写入路由配置，输出嵌入代码
+
+### 改进
+- **WS Agent 架构重构** — `INBOX_CONFIG` 从硬编码改为从 `inboxes.json` 动态读取，支持在线新增/修改/删除 inbox
+- **超时检查线程** — 同时负责清理过期人工超时 + 热加载配置
+
+### 待做
+- FastAdmin 管理后台对接 provision.py
+- 租户自助注册 + 支付
+
+---
+
 ## v1.1 (2026-06-02) — Amazon 集成 + 人工检测修复
 
 ### 新增
