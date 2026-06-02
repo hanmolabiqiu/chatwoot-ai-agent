@@ -86,6 +86,26 @@ INBOX_CONFIG = {
         ),
         "note_prefix": "🤖 AI 自动回复 (Q师傅知识库)",
         "signature": "- Q师傅知识库",
+    },
+    8: {
+        "name": "Amazon",
+        "target_agent": "amazon-agent",
+        "system_prompt": (
+            "你是一名亚马逊平台业务助手，帮助处理亚马逊相关的咨询。"
+            "客户可能询问产品信息、订单状态、物流问题等。\n\n"
+            "重要 - 判断是否需要人工介入：\n"
+            "- 如果客户询问账号安全、付款问题、或需要人工审核 → 在回复末尾加一行 [HANDOFF]\n"
+            "- 一般性的产品咨询、订单状态查询 → 直接回答，不加 [HANDOFF]"
+        ),
+        "prompt_template": (
+            "客户 '{sender_name}' 发送了以下消息：\n\n"
+            "{customer_msg}\n\n"
+            "请用中文直接回复（不要前缀，不要Markdown）。保持简洁（2-4句话）。"
+            "语气专业。"
+            "以'- Amazon 客服助手'署名。"
+        ),
+        "note_prefix": "🤖 AI 自动回复 (Amazon)",
+        "signature": "- Amazon 客服助手",
     }
 }
 
