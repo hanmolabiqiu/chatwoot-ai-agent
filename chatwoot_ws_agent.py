@@ -39,75 +39,41 @@ SCRIPT_DIR = Path(__file__).parent
 AUTH_FILE = SCRIPT_DIR / "chatwoot_auth.json"
 PROCESSED_FILE = SCRIPT_DIR / ".chatwoot_ws_processed.json"
 
-# ===== INBOX ROUTING CONFIG =====
-# Map inbox_id → AI agent config
-INBOX_CONFIG = {
-    1: {
-        "name": "GreatQiu",
-        "target_agent": "sourcing-agent",
-        "system_prompt": (
-            "You are a professional China sourcing agent from GreatQiu (based in Shaoxing, Zhejiang, China). "
-            "You help international clients with product sourcing, supplier verification, "
-            "quality control, logistics, and supply chain management.\n\n"
-            "IMPORTANT - Decide if you can fully handle this or need a human:\n"
-            "- If the customer asks about specific PRICING, MOQ, PLACING ORDERS, "
-            "CUSTOMIZATION, SHIPPING QUOTES, or COMPLEX TECHNICAL SPECS that require "
-            "real-time data from suppliers → end your reply with [HANDOFF] on a new line.\n"
-            "- If you can answer the question fully using your general knowledge "
-            "(company info, services, processes, general timelines) → do NOT add [HANDOFF]."
-        ),
-        "prompt_template": (
-            "A customer named '{sender_name}' sent this message:\n\n"
-            "{customer_msg}\n\n"
-            "Write a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). "
-            "Use the same language as the customer. "
-            "Always sign with '- GreatQiu Team'."
-        ),
-        "note_prefix": "🤖 AI 自动回复 (GreatQiu)",
-        "signature": "- GreatQiu Team",
-    },
-    7: {
-        "name": "HALO Blog",
-        "target_agent": "halo-blog-agent",
-        "system_prompt": (
-            "你是一名专业的安防弱电与IT基础设施技术顾问，来自Q师傅知识库。"
-            "你帮助客户解答关于交换机配置、监控系统、网络布线、弱电工程、服务器运维等技术问题。\n\n"
-            "重要 - 判断是否需要人工介入：\n"
-            "- 如果客户询问具体的项目报价、施工方案定制、现场勘查需求、"
-            "或需要实际采购产品 → 在回复末尾加一行 [HANDOFF]。\n"
-            "- 如果是回答一般性的技术问题（设备参数、配置方法、故障排查思路等）→ 不加 [HANDOFF]。"
-        ),
-        "prompt_template": (
-            "客户 '{sender_name}' 发送了以下消息：\n\n"
-            "{customer_msg}\n\n"
-            "请用中文直接回复（不要前缀，不要Markdown）。保持简洁（2-4句话）。"
-            "回复语气专业友善，体现技术专家的可靠性。"
-            "以'- Q师傅知识库'署名。"
-        ),
-        "note_prefix": "🤖 AI 自动回复 (Q师傅知识库)",
-        "signature": "- Q师傅知识库",
-    },
-    8: {
-        "name": "Amazon",
-        "target_agent": "9hxc2Y",
-        "system_prompt": (
-            "你是一名亚马逊平台业务助手，帮助处理亚马逊相关的咨询。"
-            "客户可能询问产品信息、订单状态、物流问题等。\n\n"
-            "重要 - 判断是否需要人工介入：\n"
-            "- 如果客户询问账号安全、付款问题、或需要人工审核 → 在回复末尾加一行 [HANDOFF]\n"
-            "- 一般性的产品咨询、订单状态查询 → 直接回答，不加 [HANDOFF]"
-        ),
-        "prompt_template": (
-            "客户 '{sender_name}' 发送了以下消息：\n\n"
-            "{customer_msg}\n\n"
-            "请用中文直接回复（不要前缀，不要Markdown）。保持简洁（2-4句话）。"
-            "语气专业。"
-            "以'- Amazon 客服助手'署名。"
-        ),
-        "note_prefix": "🤖 AI 自动回复 (Amazon)",
-        "signature": "- Amazon 客服助手",
-    }
-}
+# ===== INBOX ROUTING CONFIG (hot-reloadable from inboxes.json) =====
+INBOX_CONFIG_FILE = Path(os.environ.get(
+    "INBOX_CONFIG_FILE",
+    str(Path(__file__).parent / "inboxes.json")
+))
+INBOX_CONFIG = {}
+_INBOX_CONFIG_MTIME = 0
+
+def _load_inboxes_config():
+    """Load inbox config from JSON file. Returns dict with int keys."""
+    global INBOX_CONFIG, _INBOX_CONFIG_MTIME
+    try:
+        if not INBOX_CONFIG_FILE.exists():
+            log(f"⚠️ inboxes.json not found: {INBOX_CONFIG_FILE}")
+            return
+        mtime = INBOX_CONFIG_FILE.stat().st_mtime
+        if mtime <= _INBOX_CONFIG_MTIME:
+            return  # no change
+        raw = json.loads(INBOX_CONFIG_FILE.read_text())
+        new_cfg = {}
+        for k, v in raw.items():
+            if k.startswith("_"):
+                continue  # skip _meta etc.
+            try:
+                new_cfg[int(k)] = v
+            except (ValueError, TypeError):
+                continue
+        INBOX_CONFIG = new_cfg
+        _INBOX_CONFIG_MTIME = mtime
+        log(f"📋 Inboxes config loaded: {list(INBOX_CONFIG.keys())} (mtime={mtime})")
+    except Exception as e:
+        log(f"⚠️ Failed to load inboxes.json: {e}")
+
+# Initial load
+_load_inboxes_config()
 
 # Agent identity (from /api/v1/profile response)
 PUBSUB_TOKEN = "JQ3wQYDy6LUMwvHouKKV2scr"
@@ -713,11 +679,12 @@ class WSAgent:
 # ===== TIMEOUT CHECKER THREAD =====
 
 def timeout_checker_loop():
-    """Background thread that cleans up expired human_active entries."""
+    """Background thread: clean expired handoffs + hot-reload config."""
     while True:
-        time.sleep(60)  # Check every minute
+        time.sleep(30)  # Check every 30s
         try:
             clean_expired_human_active()
+            _load_inboxes_config()  # hot-reload if file changed
         except Exception as e:
             log(f"Timeout checker error: {e}")
 
