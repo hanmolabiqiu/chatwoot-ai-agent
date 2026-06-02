@@ -89,7 +89,7 @@ INBOX_CONFIG = {
     },
     8: {
         "name": "Amazon",
-        "target_agent": "amazon-agent",
+        "target_agent": "9hxc2Y",
         "system_prompt": (
             "你是一名亚马逊平台业务助手，帮助处理亚马逊相关的咨询。"
             "客户可能询问产品信息、订单状态、物流问题等。\n\n"
@@ -619,9 +619,21 @@ class WSAgent:
         msg_id = msg_data.get("id")
         sender_type = msg_data.get("sender_type")
         conv_id = msg_data.get("conversation_id")
+        message_type = msg_data.get("message_type")
 
         # 🔑 Detect human agent messages (sender_type="User" that are NOT from AI)
+        is_human = False
         if sender_type == "User" and conv_id and msg_id:
+            is_human = True
+        # API Inbox: outgoing msgs (type=1) from admin have sender_type="Contact"
+        # Detect via: NOT from AI + message_type=1 (outgoing) + not private note
+        if not is_human and message_type == 1 and conv_id and msg_id and not msg_data.get("private", False):
+            if not is_ai_sent_message(msg_id):
+                with _ai_pending_lock:
+                    if conv_id not in _ai_pending_convs:
+                        is_human = True
+        
+        if is_human:
             with _ai_pending_lock:
                 is_pending = conv_id in _ai_pending_convs
             if is_pending or is_ai_sent_message(msg_id):
