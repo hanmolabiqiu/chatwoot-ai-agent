@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.3 (2026-06-03) — 监控运维 + 代码清理
+
+### 新增
+- **Metrics 监控类** — 跟踪 WebSocket 连接状态、断连次数、每个 inbox 的 AI 回复成功率和响应时间
+- **DEFAULT_INBOX_CONFIG** — 硬编码兜底配置，`inboxes.json` 缺失时演示站仍正常工作
+- **配置验证** — `_validate_config()` 检查必要字段，不合规配置告警
+- **CLI 运维命令** — `--health`、`--metrics`、`--ws-status`、`--list-inboxes`、`--inbox-stats`、`--inbox-stats-csv`、`--inbox-stats-one-line`
+- **日志分级** — INFO / WARN / ERROR，写入 `/var/log/chatwoot_ws_agent.log`
+
+### 清理
+- 删除 30+ 个冗余 `--inbox-stats-*` argparse 变体，保留 4 个实用格式
+- 修复 f-string 嵌套引号语法错误
+- 净减 349 行代码（1374 → 1025 行）
+
+### 改进
+- README 更新至 v1.3，补全文件列表、CLI 文档、架构图
+
+---
+
 ## v1.2 (2026-06-02) — 多租户架构：热加载 + 自动开通
 
 ### 新增
