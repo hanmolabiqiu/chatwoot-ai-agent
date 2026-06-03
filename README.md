@@ -1,104 +1,118 @@
 # Chatwoot AI Agent — Multi-Inbox Intelligent Customer Service
 
-> **v1.0 — The Ancestor Version**  
-> The foundation of a multi-tenant AI customer service platform built on self-hosted Chatwoot.
+> A multi-tenant AI customer service platform built on self-hosted Chatwoot.  
+> Single WebSocket agent routes conversations to different AI agents per inbox — with seamless AI ↔ Human handoff.
 
-## Architecture Overview
+## Architecture
 
 ```
-Customer (via Web Widget)
+Customer (Web Widget / API)
         │
         ▼
-Chatwoot Self-Hosted (wss://)
+Chatwoot Self-Hosted (wss://chatwoot.275763.xyz/cable)
         │
         ▼
-Chatwoot WS Agent ←── INBOX_CONFIG routing
-   │          │
-   ▼          ▼
-sourcing-agent  halo-blog-agent
- (Inbox 1)      (Inbox 7)
- English        简体中文
+  WS Agent (chatwoot_ws_agent.py)
+   │  reads inboxes.json → routes by inbox_id
+   │
+   ├── Inbox 1  →  sourcing-agent     (EN, 采购代理)
+   ├── Inbox 7  →  halo-blog-agent    (中文, 安防弱电顾问)
+   └── Inbox 8  →  amazon-agent       (EN, Amazon 客服)
 ```
 
-### Core Features
+## Features
 
 | Feature | Description |
-|:---------|:------------|
-| **7×24 AI Auto-Reply** | AI responds instantly to customer inquiries |
-| **AI ↔ Human Handoff** | Seamless switching: human replies → AI backs off; human leaves → AI resumes (15min timeout) |
-| **Customer-Unaware** | AI uses User session, not AgentBot — customer sees "agent reply" |
-| **Multi-Inbox Routing** | Single WS agent routes by `inbox_id` to different AI agents & knowledge bases |
-| **Private Notes** | AI auto-generates Chinese translation notes for human agents |
-| **Offline Resilience** | Bubble stays visible even when no agent is online |
+|:--------|:-----------|
+| **24/7 AI Auto-Reply** | AI responds instantly, acts as human agent (uses User session, not AgentBot) |
+| **AI ↔ Human Handoff** | Human replies → AI backs off. Human leaves → AI resumes after 15min timeout |
+| **Multi-Inbox Routing** | Single WS agent serves multiple sites/inboxes, each with its own AI agent & knowledge base |
+| **Hot-Reload Config** | `inboxes.json` — add/edit inboxes without restarting the agent (30s polling) |
+| **Auto-Provision** | `provision.py` — one command to create Chatwoot inbox + AI agent + routing config |
+| **Health & Metrics** | CLI: `--health`, `--metrics`, `--ws-status`, `--list-inboxes`, `--inbox-stats` |
+| **Default Fallback** | Hardcoded `DEFAULT_INBOX_CONFIG` ensures demo sites work even without `inboxes.json` |
+| **Private Notes** | AI auto-generates Chinese notes for human agents on each reply |
 | **Zero Monthly Fee** | Self-hosted Chatwoot + QwenPaw, no SaaS subscription |
 
-### Routing Matrix
+## Routing Matrix
 
-| Inbox ID | Site | AI Agent | Language | Role |
-|:--------:|:-----|:---------|:--------:|:-----|
+| Inbox | Site | Agent | Lang | Role |
+|:-----:|:-----|:------|:----:|:-----|
 | 1 | greatqiu.cn | sourcing-agent | EN | Global Sourcing Advisor |
-| 7 | shopqiu.com | halo-blog-agent | 简体中文 | 安防弱电技术顾问 |
+| 7 | shopqiu.com | halo-blog-agent | 中文 | 安防弱电技术顾问 |
+| 8 | Amazon (API) | amazon-agent | EN | Amazon Customer Service |
 
 ## Quick Start
-
-### Prerequisites
-- Python 3.8+
-- Self-hosted [Chatwoot](https://www.chatwoot.com/) instance
-- [QwenPaw](https://qwenpaw.dev/) (or any OpenAI-compatible API)
-
-### Installation
 
 ```bash
 git clone https://github.com/hanmolabiqiu/chatwoot-ai-agent.git
 cd chatwoot-ai-agent
 pip install -r requirements.txt
-```
-
-### Configuration
-
-Copy and edit the environment file:
-
-```bash
 cp .env.example .env
-```
-
-Configure your Chatwoot API credentials and AI model settings in `.env`.
-
-### Run
-
-```bash
+# Edit .env with your Chatwoot API credentials
 python3 chatwoot_ws_agent.py
 ```
 
-The agent will connect to Chatwoot via WebSocket and start listening for messages.
+### CLI Commands
 
-## Project Structure
+```bash
+python3 chatwoot_ws_agent.py              # Start the WS agent
+python3 chatwoot_ws_agent.py --health     # Health check (JSON)
+python3 chatwoot_ws_agent.py --metrics    # Performance metrics (JSON)
+python3 chatwoot_ws_agent.py --ws-status  # WebSocket connection status
+python3 chatwoot_ws_agent.py --list-inboxes  # List configured inboxes
+python3 chatwoot_ws_agent.py --inbox-stats   # Formatted inbox statistics table
+python3 chatwoot_ws_agent.py --inbox-stats-csv  # Stats as CSV
+python3 chatwoot_ws_agent.py --inbox-stats-one-line  # One-line summary
+python3 chatwoot_ws_agent.py --renew      # Force session renew
+python3 chatwoot_ws_agent.py --test-ws    # Test WebSocket connection
+```
+
+### Add a New Tenant
+
+```bash
+python3 provision.py --name "NewSite" --type web_widget --lang en
+# Output: inbox ID, agent ID, embed code
+```
+
+## File Structure
 
 ```
 chatwoot-ai-agent/
-├── chatwoot_ws_agent.py     # Main WS agent — the core engine
-├── knowledge-base.md         # Knowledge base for halo-blog-agent
-├── SOUL-halo-blog-agent.md   # AI personality for 安防弱电 (Chinese)
-├── .env.example              # Environment configuration template
-├── requirements.txt          # Python dependencies
-├── README.md                 # This file
-└── .gitignore                # Git ignore rules
+├── chatwoot_ws_agent.py        # Core engine — WS agent with multi-inbox routing
+├── inboxes.json                # Hot-reloadable inbox routing config
+├── provision.py                # Auto-provision new tenants
+├── CHANGELOG.md                # Version history (v1.0 → v1.3)
+├── knowledge-base.md           # Knowledge base for halo-blog-agent
+├── SOUL-halo-blog-agent.md     # AI personality — 安防弱电 (Chinese)
+├── SOUL-amazon-agent.md        # AI personality — Amazon CS (English)
+├── PROFILE-amazon-agent.md     # Amazon agent profile
+├── .env.example                # Environment config template
+├── requirements.txt            # Python dependencies
+├── README.md                   # This file
+└── .gitignore
 ```
 
 ## Version History
 
-| Version | Date | Highlights |
-|:--------|:-----|:-----------|
-| v1.0 | 2026-05-31 | Initial release — dual inbox routing, AI↔Human handoff, knowledge base |
+| Ver | Date | Highlights |
+|:----|:-----|:-----------|
+| v1.3 | 2026-06-03 | Metrics monitoring, health check CLI, default config fallback, inbox-stats cleanup |
+| v1.2 | 2026-06-02 | Hot-reload `inboxes.json`, `provision.py` auto-provision |
+| v1.1 | 2026-06-02 | Amazon API inbox, API inbox human detection fix |
+| v1.0 | 2026-06-01 | Initial: dual inbox routing, AI↔Human handoff, knowledge base |
 
 ## Roadmap
 
-- [ ] **Config Center** — Dynamic INBOX_CONFIG from database instead of hardcoded
-- [ ] **Multi-Tenant Platform** — Auto-provision inboxes on payment, user self-service dashboard
-- [ ] **Amazon API Integration** — Product research, order management, customer message sync
-- [ ] **TikTok Channel** — Social commerce integration
-- [ ] **Tenant Knowledge Base UI** — Self-managed KB per tenant
-- [ ] **Seat-Based Billing** — Pay-per-agent pricing model
+- [x] Multi-inbox routing (GreatQiu + HALO + Amazon)
+- [x] Hot-reload config (`inboxes.json`)
+- [x] Auto-provision script (`provision.py`)
+- [x] Health check & metrics monitoring
+- [ ] FastAdmin management backend (ChatHub plugin)
+- [ ] Tenant self-service registration + payment
+- [ ] WhatsApp Business API channel
+- [ ] Chatwoot Captain AI integration
+- [ ] Automated backup & alerting
 
 ## License
 
