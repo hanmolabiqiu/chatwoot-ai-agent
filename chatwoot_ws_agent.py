@@ -570,6 +570,72 @@ def update_conversation_status(conv_id, status, headers):
         log(f"Status update error: {e}")
         return False
 
+# ===== MEETING ROOM =====
+MEETING_ROOM_INBOX_ID = 22  # "开发团队" inbox
+MEETING_AGENTS = [
+    {"id": "QWEN", "label": "[QWEN]", "agent": "wordpress"},
+    {"id": "OpenCode", "label": "[OpenCode]", "agent": "opencode"},
+]
+_meeting_ai_sent_ids = set()  # track AI-sent message IDs to avoid loop
+
+def handle_meeting_message(msg_data, headers):
+    """Handle messages in the 开发团队 meeting room inbox.
+
+    - Messages from AI agents (tracked IDs) → skip (avoid loop)
+    - Messages from human (qiu) → forward to both QWEN and OpenCode
+    - AI replies with [SKIP] → don't send to Chatwoot
+    - Other AI replies → send with [QWEN] or [OpenCode] prefix
+    """
+    msg_id = msg_data.get("id")
+    if not msg_id or is_processed(msg_id):
+        return
+
+    content = str(msg_data.get("content", "")).strip()
+    conv_id = msg_data.get("conversation_id")
+    if not content or not conv_id:
+        return
+
+    # Skip AI's own messages (avoid infinite loop)
+    if msg_id in _meeting_ai_sent_ids:
+        mark_processed(msg_id)
+        return
+
+    # Skip private notes
+    if msg_data.get("private", False):
+        return
+
+    mark_processed(msg_id)
+    sender_name = msg_data.get("sender", {}).get("name", "Unknown")
+    log(f"📩 [会议] msg #{msg_id} from '{sender_name}': {content[:100]}")
+
+    # Forward to each AI agent
+    for agent_cfg in MEETING_AGENTS:
+        prompt = (
+            f"You are {agent_cfg['id']}, a team member in a dev team meeting room.\n"
+            f"Message from '{sender_name}':\n\n{content}\n\n"
+            f"If this message is relevant to you or you have something useful to add, reply normally.\n"
+            f"If this message is NOT relevant to you, reply with ONLY: [SKIP]\n"
+            f"Do NOT add any explanation if you reply [SKIP]."
+        )
+        reply = call_qwenpaw_ai(prompt, target_agent=agent_cfg["agent"])
+        if not reply:
+            log(f"⚠️ [会议] {agent_cfg['id']} returned empty", "WARN")
+            continue
+
+        # Check for [SKIP]
+        if reply.strip() == "[SKIP]" or "[SKIP]" in reply:
+            log(f"⏭️ [会议] {agent_cfg['id']} skipped (not relevant)")
+            continue
+
+        # Send reply with agent label prefix
+        tagged_reply = f"{agent_cfg['label']} {reply}"
+        ok, resp = send_reply(conv_id, tagged_reply, headers)
+        if ok:
+            _meeting_ai_sent_ids.add(resp.get("id"))
+            log(f"✅ [会议] {agent_cfg['id']} replied to conv #{conv_id}")
+        else:
+            log(f"❌ [会议] {agent_cfg['id']} failed: {resp}", "ERROR")
+
 # ===== MESSAGE HANDLER =====
 
 def handle_incoming_message(msg_data, headers):
@@ -781,8 +847,12 @@ class WSAgent:
                 content = str(msg_data.get("content", ""))[:100]
                 log(f"👤 Human agent '{agent_name}' replied in conv #{conv_id}: {content}")
 
-        # Process incoming customer messages as before
-        Thread(target=handle_incoming_message, args=(msg_data, self.headers), daemon=True).start()
+        # Route to meeting room or normal inbox handler
+        inbox_id = msg_data.get("inbox_id")
+        if inbox_id == MEETING_ROOM_INBOX_ID:
+            Thread(target=handle_meeting_message, args=(msg_data, self.headers), daemon=True).start()
+        else:
+            Thread(target=handle_incoming_message, args=(msg_data, self.headers), daemon=True).start()
 
     def _on_conversation_updated(self, data):
         """Handle conversation status changes.
