@@ -27,6 +27,7 @@ import websocket
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from threading import Thread, Event, Lock
+from collections import defaultdict
 
 # ===== CONFIG =====
 CW_BASE = "https://chatwoot.275763.xyz"
@@ -38,6 +39,7 @@ CW_API_BASE = f"{CW_BASE}/api/v1/accounts/{CW_ACCOUNT_ID}"
 SCRIPT_DIR = Path(__file__).parent
 AUTH_FILE = SCRIPT_DIR / "chatwoot_auth.json"
 PROCESSED_FILE = SCRIPT_DIR / ".chatwoot_ws_processed.json"
+METRICS_FILE = SCRIPT_DIR / ".chatwoot_ws_metrics.json"
 
 # ===== INBOX ROUTING CONFIG (hot-reloadable from inboxes.json) =====
 INBOX_CONFIG_FILE = Path(os.environ.get(
@@ -47,12 +49,49 @@ INBOX_CONFIG_FILE = Path(os.environ.get(
 INBOX_CONFIG = {}
 _INBOX_CONFIG_MTIME = 0
 
+# Default fallback config (hardcoded for demo sites)
+DEFAULT_INBOX_CONFIG = {
+    1: {
+        "name": "GreatQiu",
+        "type": "web_widget",
+        "target_agent": "sourcing-agent",
+        "system_prompt": "You are a professional China sourcing agent from GreatQiu (based in Shaoxing, Zhejiang, China). You help international clients with product sourcing, supplier verification, quality control, logistics, and supply chain management.\n\nIMPORTANT - Decide if you can fully handle this or need a human:\n- If the customer asks about specific PRICING, MOQ, PLACING ORDERS, CUSTOMIZATION, SHIPPING QUOTES, or COMPLEX TECHNICAL SPECS that require real-time data from suppliers → end your reply with [HANDOFF] on a new line.\n- If you can answer the question fully using your general knowledge (company info, services, processes, general timelines) → do NOT add [HANDOFF].",
+        "prompt_template": "A customer named '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer. Always sign with '- GreatQiu Team'.",
+        "note_prefix": "🤖 AI 自动回复 (GreatQiu)",
+        "signature": "- GreatQiu Team",
+        "status": "active"
+    },
+    7: {
+        "name": "HALO Blog",
+        "type": "web_widget",
+        "target_agent": "halo-blog-agent",
+        "system_prompt": "你是一名专业的安防弱电与IT基础设施技术顾问，来自Q师傅知识库。你帮助客户解答关于交换机配置、监控系统、网络布线、弱电工程、服务器运维等技术问题。\n\n重要 - 判断是否需要人工介入：\n- 如果客户询问具体的项目报价、施工方案定制、现场勘查需求、或需要实际采购产品 → 在回复末尾加一行 [HANDOFF]。\n- 如果是回答一般性的技术问题（设备参数、配置方法、故障排查思路等）→ 不加 [HANDOFF]。",
+        "prompt_template": "客户 '{sender_name}' 发送了以下消息：\n\n{customer_msg}\n\n请用中文直接回复（不要前缀，不要Markdown）。保持简洁（2-4句话）。回复语气专业友善，体现技术专家的可靠性。以'- Q师傅知识库'署名。",
+        "note_prefix": "🤖 AI 自动回复 (Q师傅知识库)",
+        "signature": "- Q师傅知识库",
+        "status": "active"
+    }
+}
+
+def _validate_config(config):
+    """Validate inbox config structure."""
+    required_keys = ["name", "target_agent", "system_prompt", "prompt_template"]
+    if not isinstance(config, dict):
+        return False
+    for key in required_keys:
+        if key not in config:
+            return False
+    return True
+
 def _load_inboxes_config():
-    """Load inbox config from JSON file. Returns dict with int keys."""
+    """Load inbox config from JSON file. Falls back to DEFAULT_INBOX_CONFIG if file missing."""
     global INBOX_CONFIG, _INBOX_CONFIG_MTIME
     try:
         if not INBOX_CONFIG_FILE.exists():
-            log(f"⚠️ inboxes.json not found: {INBOX_CONFIG_FILE}")
+            if not INBOX_CONFIG:  # Only log on first load
+                log(f"inboxes.json not found: {INBOX_CONFIG_FILE}, using default config", "WARN")
+                INBOX_CONFIG = DEFAULT_INBOX_CONFIG.copy()
+                log(f"Default config loaded: {list(INBOX_CONFIG.keys())}")
             return
         mtime = INBOX_CONFIG_FILE.stat().st_mtime
         if mtime <= _INBOX_CONFIG_MTIME:
@@ -63,17 +102,37 @@ def _load_inboxes_config():
             if k.startswith("_"):
                 continue  # skip _meta etc.
             try:
-                new_cfg[int(k)] = v
+                inbox_id = int(k)
+                if _validate_config(v):
+                    new_cfg[inbox_id] = v
+                else:
+                    log(f"Invalid config for inbox #{k}, skipping", "WARN")
             except (ValueError, TypeError):
                 continue
+        
+        # Detect changes
+        old_keys = set(INBOX_CONFIG.keys()) if INBOX_CONFIG else set()
+        new_keys = set(new_cfg.keys())
+        added = new_keys - old_keys
+        removed = old_keys - new_keys
+        changed = {k for k in old_keys & new_keys if INBOX_CONFIG.get(k) != new_cfg.get(k)}
+        
+        if added or removed or changed:
+            log(f"📋 Config changes detected:", "INFO")
+            if added:
+                log(f"   ➕ Added: {[new_cfg[k]['name'] for k in added]}", "INFO")
+            if removed:
+                log(f"   ➖ Removed: {[INBOX_CONFIG[k]['name'] for k in removed]}", "INFO")
+            if changed:
+                log(f"   🔄 Changed: {[new_cfg[k]['name'] for k in changed]}", "INFO")
+        
         INBOX_CONFIG = new_cfg
         _INBOX_CONFIG_MTIME = mtime
-        log(f"📋 Inboxes config loaded: {list(INBOX_CONFIG.keys())} (mtime={mtime})")
+        log(f"Inboxes config loaded: {list(INBOX_CONFIG.keys())} (mtime={mtime})")
     except Exception as e:
-        log(f"⚠️ Failed to load inboxes.json: {e}")
-
-# Initial load
-_load_inboxes_config()
+        log(f"Failed to load inboxes.json: {e}, using default config", "ERROR")
+        if not INBOX_CONFIG:
+            INBOX_CONFIG = DEFAULT_INBOX_CONFIG.copy()
 
 # Agent identity (from /api/v1/profile response)
 PUBSUB_TOKEN = "JQ3wQYDy6LUMwvHouKKV2scr"
@@ -93,9 +152,109 @@ HUMAN_TIMEOUT_MINUTES = 15
 
 # ===== LOGGING =====
 
-def log(msg):
+def log(msg, level="INFO", inbox_name=None):
     ts = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
+    prefix = f"[{inbox_name}] " if inbox_name else ""
+    print(f"[{ts}] [{level}] {prefix}{msg}", flush=True)
+
+# ===== MONITORING & METRICS =====
+
+class Metrics:
+    """Track performance metrics per inbox."""
+    
+    def __init__(self, filepath):
+        self.filepath = Path(filepath)
+        self.lock = Lock()
+        self.data = self._load()
+    
+    def _load(self):
+        if self.filepath.exists():
+            try:
+                return json.loads(self.filepath.read_text())
+            except:
+                pass
+        return {
+            "started_at": datetime.now(TZ).isoformat(),
+            "ws_connected": False,
+            "ws_disconnects": 0,
+            "ws_last_disconnect": None,
+            "inboxes": {}
+        }
+    
+    def _save(self):
+        try:
+            self.filepath.write_text(json.dumps(self.data, indent=2))
+        except Exception as e:
+            log(f"Failed to save metrics: {e}", "WARN")
+    
+    def ws_connected(self):
+        with self.lock:
+            self.data["ws_connected"] = True
+            self._save()
+    
+    def ws_disconnected(self, reason="unknown"):
+        with self.lock:
+            self.data["ws_connected"] = False
+            self.data["ws_disconnects"] += 1
+            self.data["ws_last_disconnect"] = {
+                "time": datetime.now(TZ).isoformat(),
+                "reason": reason
+            }
+            self._save()
+        log(f"⚠️ WebSocket disconnected: {reason}", "WARN")
+    
+    def record_reply(self, inbox_id, inbox_name, success, duration_ms):
+        with self.lock:
+            inbox_key = str(inbox_id)
+            if inbox_key not in self.data["inboxes"]:
+                self.data["inboxes"][inbox_key] = {
+                    "name": inbox_name,
+                    "total_requests": 0,
+                    "success": 0,
+                    "failed": 0,
+                    "total_duration_ms": 0,
+                    "avg_duration_ms": 0,
+                    "last_reply": None
+                }
+            
+            inbox = self.data["inboxes"][inbox_key]
+            inbox["total_requests"] += 1
+            if success:
+                inbox["success"] += 1
+            else:
+                inbox["failed"] += 1
+            inbox["total_duration_ms"] += duration_ms
+            inbox["avg_duration_ms"] = inbox["total_duration_ms"] / inbox["total_requests"]
+            inbox["last_reply"] = datetime.now(TZ).isoformat()
+            self._save()
+    
+    def get_summary(self):
+        with self.lock:
+            summary = {
+                "uptime_since": self.data["started_at"],
+                "ws_connected": self.data["ws_connected"],
+                "ws_disconnects": self.data["ws_disconnects"],
+                "ws_last_disconnect": self.data["ws_last_disconnect"],
+                "inboxes": {}
+            }
+            for inbox_id, stats in self.data["inboxes"].items():
+                success_rate = (stats["success"] / stats["total_requests"] * 100) if stats["total_requests"] > 0 else 0
+                summary["inboxes"][inbox_id] = {
+                    "name": stats["name"],
+                    "total": stats["total_requests"],
+                    "success": stats["success"],
+                    "failed": stats["failed"],
+                    "success_rate": f"{success_rate:.1f}%",
+                    "avg_ms": f"{stats['avg_duration_ms']:.0f}",
+                    "last_reply": stats["last_reply"]
+                }
+            return summary
+
+# Global metrics instance
+metrics = Metrics(METRICS_FILE)
+
+# Initial load (after log is defined)
+_load_inboxes_config()
 
 # ===== SESSION MANAGEMENT (same as polling agent) =====
 
@@ -458,16 +617,20 @@ def handle_incoming_message(msg_data, headers):
     # Mark immediately to avoid duplicate processing
     mark_processed(msg_id)
 
-    log(f"📩 [{config['name']}] New msg #{msg_id} from '{sender_name}' in conv #{conv_id}: {content[:100]}")
+    log(f"📩 [{config['name']}] New msg #{msg_id} from '{sender_name}' in conv #{conv_id}: {content[:100]}", inbox_name=config['name'])
 
     # Generate AI reply with inbox-specific config
-    log(f"🤖 [{config['name']}] Generating AI reply...")
+    log(f"🤖 [{config['name']}] Generating AI reply...", inbox_name=config['name'])
+    start_time = time.time()
     reply = generate_ai_reply(content, sender_name, inbox_id)
+    duration_ms = (time.time() - start_time) * 1000
+    
     if not reply:
-        log(f"⚠️ [{config['name']}] Empty AI reply, skipping")
+        log(f"⚠️ [{config['name']}] Empty AI reply, skipping", "WARN", config['name'])
+        metrics.record_reply(inbox_id, config['name'], False, duration_ms)
         return
 
-    log(f"💬 [{config['name']}] AI reply: {reply[:150]}")
+    log(f"💬 [{config['name']}] AI reply ({duration_ms:.0f}ms): {reply[:150]}", inbox_name=config['name'])
 
     # Check if AI thinks this needs human handoff
     needs_handoff = False
@@ -479,9 +642,11 @@ def handle_incoming_message(msg_data, headers):
     # Send the reply (will be tracked in ai_sent_msg_ids)
     ok, resp_data = send_reply(conv_id, reply, headers)
     if ok:
-        log(f"✅ Reply sent to conv #{conv_id}")
+        log(f"✅ Reply sent to conv #{conv_id}", inbox_name=config['name'])
+        metrics.record_reply(inbox_id, config['name'], True, duration_ms)
     else:
-        log(f"❌ Failed to send reply: {resp_data}")
+        log(f"❌ Failed to send reply: {resp_data}", "ERROR", config['name'])
+        metrics.record_reply(inbox_id, config['name'], False, duration_ms)
 
     # Send private note with translation
     chinese_summary = translate_to_chinese(
@@ -526,6 +691,7 @@ class WSAgent:
 
     def on_open(self, ws):
         log("🟢 WebSocket connected")
+        metrics.ws_connected()
         # Subscribe to RoomChannel
         sub = json.dumps({
             "channel": "RoomChannel",
@@ -575,6 +741,9 @@ class WSAgent:
                 log(f"📋 New conversation created")
             elif event:
                 log(f"📡 Event: {event}")
+        else:
+            # Debug: log any non-dict messages
+            log(f"📡 Raw message: {str(data)[:200]}", "DEBUG")
 
     def _on_message_created(self, msg_data):
         """Handle a message_created event.
@@ -634,10 +803,12 @@ class WSAgent:
             log(f"🔄 Conv #{conv_id} status -> 'open'")
 
     def on_error(self, ws, error):
-        log(f"🔴 WS Error: {error}")
+        log(f"🔴 WS Error: {error}", "ERROR")
+        metrics.ws_disconnected(str(error))
 
     def on_close(self, ws, status, msg):
-        log(f"🔴 WebSocket closed (status={status}, msg={msg})")
+        log(f"🔴 WebSocket closed (status={status}, msg={msg})", "WARN")
+        metrics.ws_disconnected(f"status={status}, msg={msg}")
         if self.running.is_set():
             self._reconnect()
 
@@ -694,6 +865,16 @@ def main():
     parser = argparse.ArgumentParser(description="Chatwoot WebSocket AI Agent")
     parser.add_argument("--renew", action="store_true", help="Force renew session & exit")
     parser.add_argument("--test-ws", action="store_true", help="Test WebSocket connection & exit")
+    parser.add_argument("--health", action="store_true", help="Print health status (JSON) & exit")
+    parser.add_argument("--metrics", action="store_true", help="Print detailed metrics (JSON) & exit")
+    parser.add_argument("--reset-metrics", action="store_true", help="Reset all metrics & exit")
+    parser.add_argument("--inbox-metrics", type=int, help="Print metrics for specific inbox ID")
+    parser.add_argument("--ws-status", action="store_true", help="Print WebSocket connection status & exit")
+    parser.add_argument("--list-inboxes", action="store_true", help="List configured inboxes & exit")
+    parser.add_argument("--inbox-stats", action="store_true", help="Print formatted inbox statistics table & exit")
+    parser.add_argument("--inbox-stats-json", action="store_true", help="Print inbox statistics as JSON & exit")
+    parser.add_argument("--inbox-stats-csv", action="store_true", help="Print inbox statistics as CSV & exit")
+    parser.add_argument("--inbox-stats-one-line", action="store_true", help="Print inbox stats as single line & exit")
     args = parser.parse_args()
 
     if args.renew:
@@ -712,6 +893,114 @@ def main():
             agent.stop()
         Thread(target=_timeout, daemon=True).start()
         agent.start()
+        return
+
+    if args.health:
+        # Print health status with metrics
+        summary = metrics.get_summary()
+        status = {
+            "status": "running",
+            "inboxes": list(INBOX_CONFIG.keys()),
+            "human_timeout_minutes": HUMAN_TIMEOUT_MINUTES,
+            "active_human_convs": len(human_active_convs),
+            "processed_msgs": len(processed_ids),
+            "ai_sent_msgs": len(ai_sent_msg_ids),
+            "config_source": "inboxes.json" if INBOX_CONFIG_FILE.exists() else "default",
+            "metrics": summary
+        }
+        print(json.dumps(status, indent=2))
+        return
+
+    if args.metrics:
+        # Print detailed metrics
+        print(json.dumps(metrics.get_summary(), indent=2))
+        return
+
+    if args.reset_metrics:
+        # Reset metrics
+        metrics.data = {
+            "started_at": datetime.now(TZ).isoformat(),
+            "ws_connected": False,
+            "ws_disconnects": 0,
+            "ws_last_disconnect": None,
+            "inboxes": {}
+        }
+        metrics._save()
+        print("Metrics reset successfully")
+        return
+
+    if args.inbox_metrics:
+        # Print metrics for specific inbox
+        inbox_id = args.inbox_metrics
+        summary = metrics.get_summary()
+        inbox_data = summary.get("inboxes", {}).get(str(inbox_id))
+        if inbox_data:
+            print(json.dumps({inbox_id: inbox_data}, indent=2))
+        else:
+            print(f"No metrics found for inbox {inbox_id}")
+        return
+
+    if args.ws_status:
+        # Print WebSocket status
+        summary = metrics.get_summary()
+        ws_status = {
+            "connected": summary["ws_connected"],
+            "disconnects": summary["ws_disconnects"],
+            "last_disconnect": summary["ws_last_disconnect"],
+            "uptime_since": summary["uptime_since"]
+        }
+        print(json.dumps(ws_status, indent=2))
+        return
+
+    if args.list_inboxes:
+        # List configured inboxes
+        inboxes = []
+        for inbox_id, config in INBOX_CONFIG.items():
+            inboxes.append({
+                "id": inbox_id,
+                "name": config["name"],
+                "type": config.get("type", "unknown"),
+                "target_agent": config["target_agent"],
+                "status": config.get("status", "active")
+            })
+        print(json.dumps(inboxes, indent=2))
+        return
+
+    if args.inbox_stats:
+        # Print formatted inbox statistics
+        summary = metrics.get_summary()
+        print("\n📊 Inbox Statistics")
+        print("=" * 60)
+        print(f"{'Inbox':<15} {'Name':<15} {'Total':<8} {'Success':<8} {'Failed':<8} {'Rate':<8} {'Avg (ms)':<10}")
+        print("-" * 60)
+        for inbox_id, stats in summary.get("inboxes", {}).items():
+            print(f"{inbox_id:<15} {stats['name']:<15} {stats['total']:<8} {stats['success']:<8} {stats['failed']:<8} {stats['success_rate']:<8} {stats['avg_ms']:<10}")
+        print("=" * 60)
+        return
+
+    if args.inbox_stats_json:
+        # Print inbox statistics as JSON
+        summary = metrics.get_summary()
+        print(json.dumps(summary.get("inboxes", {}), indent=2))
+        return
+
+
+    if args.inbox_stats_csv:
+        # Print inbox statistics as CSV
+        summary = metrics.get_summary()
+        print("inbox_id,name,total,success,failed,success_rate,avg_ms")
+        for inbox_id, stats in summary.get("inboxes", {}).items():
+            print(f"{inbox_id},{stats['name']},{stats['total']},{stats['success']},{stats['failed']},{stats['success_rate']},{stats['avg_ms']}")
+        return
+
+    if args.inbox_stats_one_line:
+        # Print one-line inbox statistics
+        summary = metrics.get_summary()
+        total_requests = sum(stats["total"] for stats in summary.get("inboxes", {}).values())
+        total_success = sum(stats["success"] for stats in summary.get("inboxes", {}).values())
+        success_rate = (total_success / total_requests * 100) if total_requests > 0 else 0
+        inboxes = [f"{inbox_id}:{stats['name']}" for inbox_id, stats in summary.get("inboxes", {}).items()]
+        print(f"📊 {len(summary.get('inboxes', {}))} inboxes | {total_requests} req | {success_rate:.1f}% success | {', '.join(inboxes)}")
         return
 
     log(f"🚀 Chatwoot WS Agent starting...")
