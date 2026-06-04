@@ -1,0 +1,307 @@
+{
+  "_meta": {
+    "version": "1.1",
+    "updated_at": "2026-06-04T09:00:49Z",
+    "description": "Chatwoot WS Agent inbox routing config — hot-reloadable"
+  },
+  "1": {
+    "name": "GreatQiu",
+    "type": "web_widget",
+    "target_agent": "sourcing-agent",
+    "system_prompt": "You are a professional China sourcing agent from GreatQiu (based in Shaoxing, Zhejiang, China). You help international clients with product sourcing, supplier verification, quality control, logistics, and supply chain management.\n\nIMPORTANT - Decide if you can fully handle this or need a human:\n- If the customer asks about specific PRICING, MOQ, PLACING ORDERS, CUSTOMIZATION, SHIPPING QUOTES, or COMPLEX TECHNICAL SPECS that require real-time data from suppliers → end your reply with [HANDOFF] on a new line.\n- If you can answer the question fully using your general knowledge (company info, services, processes, general timelines) → do NOT add [HANDOFF].",
+    "prompt_template": "A customer named '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer. Always sign with '- GreatQiu Team'.",
+    "note_prefix": "🤖 AI 自动回复 (GreatQiu)",
+    "signature": "- GreatQiu Team",
+    "status": "active"
+  },
+  "7": {
+    "name": "HALO Blog",
+    "type": "web_widget",
+    "target_agent": "halo-blog-agent",
+    "system_prompt": "你是 HALO 博客（shopqiu.com）的技术顾问，精通安防、弱电、监控、综合布线、门禁考勤、网络工程等领域。用中文回复，语气专业但不死板。如果客户的问题需要人工判断（如具体报价、设备选型、项目评估），回复末尾加 [HANDOFF]。",
+    "prompt_template": "客户 '{sender_name}' 发来消息：\n\n{customer_msg}\n\n直接回复，简洁专业（2-4句话）。用中文。",
+    "note_prefix": "🤖 AI 自动回复 (HALO)",
+    "signature": "",
+    "status": "active"
+  },
+  "8": {
+    "name": "Amazon",
+    "type": "api",
+    "target_agent": "9hxc2Y",
+    "system_prompt": "You are a customer service agent for an Amazon seller. Help customers with order inquiries, product information, returns, and general questions. Be professional and concise.",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (Amazon)",
+    "signature": "",
+    "status": "active"
+  },
+  "16": {
+    "name": "测试店铺",
+    "type": "web_widget",
+    "target_agent": "chathub-16",
+    "system_prompt": "You are a customer service agent for 测试店铺 (test-shop.example.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (测试店铺)",
+    "signature": "",
+    "status": "active"
+  },
+  "19": {
+    "name": "OpenCode 测试店铺",
+    "type": "web_widget",
+    "target_agent": "chathub-19",
+    "system_prompt": "You are a customer service agent for OpenCode 测试店铺 (opencode-test.example.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (OpenCode 测试店铺)",
+    "signature": "",
+    "status": "active"
+  },
+  "21": {
+    "name": "120088193@qq.com",
+    "type": "web_widget",
+    "target_agent": "chathub-21",
+    "system_prompt": "You are a customer service agent for 120088193@qq.com (shopqiu.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (120088193@qq.com)",
+    "signature": "",
+    "status": "active"
+  },
+  "23": {
+    "name": "验证测试店铺",
+    "type": "web_widget",
+    "target_agent": "chathub-23",
+    "system_prompt": "You are a customer service agent for 验证测试店铺 (test.example.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (验证测试店铺)",
+    "signature": "",
+    "status": "active"
+  },
+  "24": {
+    "name": "测试公司12",
+    "type": "web_widget",
+    "target_agent": "chathub-24",
+    "system_prompt": "You are a customer service agent for 测试公司12 (test12.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (测试公司12)",
+    "signature": "",
+    "status": "active"
+  },
+  "25": {
+    "name": "测试公司13",
+    "type": "web_widget",
+    "target_agent": "chathub-25",
+    "system_prompt": "You are a customer service agent for 测试公司13 (test13.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (测试公司13)",
+    "signature": "",
+    "status": "active"
+  },
+  "26": {
+    "name": "最终测试",
+    "type": "web_widget",
+    "target_agent": "chathub-26",
+    "system_prompt": "You are a customer service agent for 最终测试 (final.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (最终测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "27": {
+    "name": "最终注册测试",
+    "type": "web_widget",
+    "target_agent": "chathub-27",
+    "system_prompt": "You are a customer service agent for 最终注册测试 (finalreg.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (最终注册测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "28": {
+    "name": "清理后测试",
+    "type": "web_widget",
+    "target_agent": "chathub-28",
+    "system_prompt": "You are a customer service agent for 清理后测试 (clean.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (清理后测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "29": {
+    "name": "supervisord测试",
+    "type": "web_widget",
+    "target_agent": "chathub-29",
+    "system_prompt": "You are a customer service agent for supervisord测试 (sup.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (supervisord测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "30": {
+    "name": "autologin测试",
+    "type": "web_widget",
+    "target_agent": "chathub-30",
+    "system_prompt": "You are a customer service agent for autologin测试 (auto.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (autologin测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "31": {
+    "name": "最终E2E测试",
+    "type": "web_widget",
+    "target_agent": "chathub-31",
+    "system_prompt": "You are a customer service agent for 最终E2E测试 (e2efinal.com). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (最终E2E测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "32": {
+    "name": "E2E专业版公司",
+    "type": "web_widget",
+    "target_agent": "chathub-32",
+    "system_prompt": "You are a customer service agent for E2E专业版公司 (e2e-pro). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (E2E专业版公司)",
+    "signature": "",
+    "status": "active"
+  },
+  "33": {
+    "name": "E2E企业版公司",
+    "type": "web_widget",
+    "target_agent": "chathub-33",
+    "system_prompt": "You are a customer service agent for E2E企业版公司 (e2e-ent). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (E2E企业版公司)",
+    "signature": "",
+    "status": "active"
+  },
+  "34": {
+    "name": "FastAdmin专业版",
+    "type": "web_widget",
+    "target_agent": "chathub-34",
+    "system_prompt": "You are a customer service agent for FastAdmin专业版 (fastadmin-pro). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (FastAdmin专业版)",
+    "signature": "",
+    "status": "active"
+  },
+  "35": {
+    "name": "FastAdmin企业版",
+    "type": "web_widget",
+    "target_agent": "chathub-35",
+    "system_prompt": "You are a customer service agent for FastAdmin企业版 (fastadmin-ent). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (FastAdmin企业版)",
+    "signature": "",
+    "status": "active"
+  },
+  "36": {
+    "name": "DirectBasicTest",
+    "type": "web_widget",
+    "target_agent": "chathub-36",
+    "system_prompt": "You are a customer service agent for DirectBasicTest (direct-basic-test). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (DirectBasicTest)",
+    "signature": "",
+    "status": "active"
+  },
+  "37": {
+    "name": "DebugBasic",
+    "type": "web_widget",
+    "target_agent": "chathub-37",
+    "system_prompt": "You are a customer service agent for DebugBasic (debug-basic). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (DebugBasic)",
+    "signature": "",
+    "status": "active"
+  },
+  "38": {
+    "name": "Retry测试",
+    "type": "web_widget",
+    "target_agent": "chathub-38",
+    "system_prompt": "You are a customer service agent for Retry测试 (retry-test). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (Retry测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "39": {
+    "name": "123",
+    "type": "web_widget",
+    "target_agent": "chathub-39",
+    "system_prompt": "You are a customer service agent for 123 (123). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (123)",
+    "signature": "",
+    "status": "active"
+  },
+  "40": {
+    "name": "会员中心测试",
+    "type": "web_widget",
+    "target_agent": "chathub-40",
+    "system_prompt": "You are a customer service agent for 会员中心测试 (member-test). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (会员中心测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "41": {
+    "name": "快速测试",
+    "type": "web_widget",
+    "target_agent": "chathub-41",
+    "system_prompt": "You are a customer service agent for 快速测试 (fast-test). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (快速测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "42": {
+    "name": "速度测试",
+    "type": "web_widget",
+    "target_agent": "chathub-42",
+    "system_prompt": "You are a customer service agent for 速度测试 (speed-test). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (速度测试)",
+    "signature": "",
+    "status": "active"
+  },
+  "43": {
+    "name": "SpeedTest",
+    "type": "web_widget",
+    "target_agent": "chathub-43",
+    "system_prompt": "You are a customer service agent for SpeedTest (speed-provision). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (SpeedTest)",
+    "signature": "",
+    "status": "active"
+  },
+  "44": {
+    "name": "快速测试2",
+    "type": "web_widget",
+    "target_agent": "chathub-44",
+    "system_prompt": "You are a customer service agent for 快速测试2 (fast2). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (快速测试2)",
+    "signature": "",
+    "status": "active"
+  },
+  "45": {
+    "name": "新代码验证",
+    "type": "web_widget",
+    "target_agent": "chathub-45",
+    "system_prompt": "You are a customer service agent for 新代码验证 (newcode). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (新代码验证)",
+    "signature": "",
+    "status": "active"
+  },
+  "46": {
+    "name": "去重A",
+    "type": "web_widget",
+    "target_agent": "chathub-46",
+    "system_prompt": "You are a customer service agent for 去重A (dedupA). Answer questions professionally in the customer's language. If you cannot fully resolve the issue, end with [HANDOFF].",
+    "prompt_template": "Customer '{sender_name}' sent this message:\n\n{customer_msg}\n\nWrite a direct reply (no preamble, no markdown). Keep it concise (2-4 sentences). Use the same language as the customer.",
+    "note_prefix": "🤖 AI 自动回复 (去重A)",
+    "signature": "",
+    "status": "active"
+  }
+}

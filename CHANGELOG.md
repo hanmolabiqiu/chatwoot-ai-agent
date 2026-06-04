@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.4 (2026-06-04) — 多租户开通 + 安全性重构
+
+### 新增
+- **provison_server.py** — 555 行 HTTP API 服务，支持 /provision /suspend /activate 端点
+  - 自动创建 Chatwoot Inbox + Team + Agent 账号 + QwenPaw Agent + 路由配置
+  - Chatwoot Team 管理：每个租户创建独立团队，席位限制（max_agents 默认 3）
+  - 失败回滚：创建过程中出错自动删除已建资源
+  - X-API-Key 头部认证，Idempotency-Key 幂等性支持（5 分钟 TTL）
+  - Session 自动续期：expiry < 1h 时自动重新登录
+  - 401 自动重试 3 次，非 JSON 响应错误处理
+- **状态持久化** — WS Agent 每 30 秒保存 ai_sent_msg_ids / human_active_convs 到 JSON 文件，重启可恢复
+- **会议室模式** — 开发团队 Inbox 消息同时转发多个 AI，`[SKIP]` 机制防重复回复
+- **PIBSUB_TOKEN 三级 fallback** — 环境变量 → auth 文件 → login 响应，最后一级仅兜底尝试
+- **supervisor 托管** — [program:ws_agent] 自动重启，与旧版 start_agent.sh 解耦
+
+### 修复
+- **硬编码凭证全面清除** — CW_EMAIL / CW_PASSWORD 改为环境变量必需，无默认 fallback
+- **双重 WebSocket 重连** — 删除 _reconnect()，改为 run_forever(reconnect=5) 自动管理
+- **内存泄漏** — ai_sent_msg_ids / processed_ids 无界增长，新增定期清理（上限 10000 条）
+- **INBOX_CONFIG KeyError 崩溃** — 缺失配置时改为 skip + log，不再崩溃
+- **PID 文件竞争** — /proc/PID/cmdline 验证，防止读取过期 PID
+- **Metrics 热路径** — _dirty 标记 + 30 秒 flush，避免每次记录写磁盘
+- **SIGTERM 优雅退出** — signal handler + save_state + metrics.flush
+- _validate_config 占位符校验（sender_name / customer_msg）
+- **幂等性正确实现** — 存储真实响应（含 HTTP 状态码），而非假 success
+- **_disable_inbox 注释说明** — Chatwoot API 无真 disable 字段，改用改名+清 channel 方案
+
+### 安全
+- 所有敏感信息改为环境变量：CW_BASE / CW_EMAIL / CW_PASSWORD / CW_PLATFORM_TOKEN / CHATHUB_API_KEY
+- .env.example 提供模板，.env / chatwoot_auth.json / inboxes.json 加入 .gitignore
+- 代码内无硬编码 URL、邮箱、密码、token
+
+---
+
 ## v1.3 (2026-06-03) — 监控运维 + 代码清理
 
 ### 新增

@@ -1,31 +1,8 @@
-# Environment
-.env
-*.env.local
-
-# Python
+chatwoot_auth.json
+inboxes.json
+.chatwoot_ws_state.json
+.chatwoot_ws_processed.json
+.chatwoot_ws_metrics.json
 __pycache__/
 *.pyc
-*.pyo
-.python-version
-*.egg-info/
-dist/
-build/
-
-# Logs
-*.log
-/var/log/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Config
-config.json
-*.pem
-*.key
+.env
