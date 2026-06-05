@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.7 (2026-06-05) — 对话上下文 + 客户画像 + 指数退避重连
+
+### 新增
+- **`--session-id` 对话上下文** — WS Agent 维护 `conv_id → session_id` 映射，每次调 `qwenpaw agents chat` 时传入 `--session-id`，AI 获得完整对话历史
+  - 同一会话的连续消息不再断开上下文，AI 知道"刚才说过什么"
+  - 持久化到状态文件，重启不丢失
+  - 自动清理超过 10000 条的大映射表
+- **对话摘要** — 每 15 轮 AI 回复后自动调用 AI 压缩历史，生成 1-2 句话摘要
+  - 下次请求时将摘要注入 prompt 开头，减少 token 消耗
+  - 长对话 AI 仍能记住核心信息（客户需求、讨论过的产品）
+- **客户画像** — 维护 `contact_id → 画像` 映射（姓名、最近 3 次交互记录）
+  - 每次 AI 回复后自动更新画像
+  - 下次对话自动注入客户历史上下文
+  - 持久化到状态文件，重启不丢失
+- **WebSocket 指数退避重连** — 断线重连从固定 5s 改为指数退避
+  - 初始 5s → 10s → 20s → 40s → 最大 60s
+  - 重连前自动续期 Chatwoot session（防止长时间断线后 token 过期）
+  - 失败时继续尝试，不会停止
+
+### 文件
+- `chatwoot_ws_agent.py` 从 1294 行增至 1459 行（+165 行）
+- 新增 9 个函数：`_get_or_create_session`、`_prune_sessions`、`_summarize_conversation`、`_get_conversation_context`、`_update_contact_profile`、`_get_contact_context`
+- 修改 4 个函数：`call_qwenpaw_ai`（+session_id）、`generate_ai_reply`（+session_id）、`handle_incoming_message`（+3 层 context）、`save_state/load_state`（+3 个持久化字段）
+- 重写 1 个函数：`WSAgent.start`（指数退避重连）
+
+---
+
 ## v1.6 (2026-06-05) — Platform Gateway + 5 平台 API 集成
 
 ### 新增

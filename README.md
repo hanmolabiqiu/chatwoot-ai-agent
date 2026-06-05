@@ -241,6 +241,7 @@ chatwoot-ai-agent/
 | v1.4 | 多租户架构，Provision Server，状态持久化，安全性重构 |
 | v1.5 | 消息防抖（5s 累积合并），AI 错误重试（指数退避）|
 | v1.6 | Platform Gateway 库——Amazon/JD/Taobao/PDD/TikTok 5 平台统一 API 集成 |
+| v1.7 | 对话上下文（`--session-id`）+ 对话摘要 + 客户画像 + WebSocket 指数退避重连 |
 
 ## 许可证
 
