@@ -245,4 +245,11 @@ chatwoot-ai-agent/
 
 ## 许可证
 
-MIT License
+**GNU Affero General Public License v3 (AGPL-3.0)**
+
+本许可证要求：如果您修改了代码并向用户提供服务（包括通过网络提供），您必须公开您的修改。
+
+选择 AGPL v3 的原因：
+- 与 Chatwoot（本系统依赖的客服平台）保持许可证一致
+- 防止竞争对手直接复制本代码提供相同商业服务
+- 如果您需要闭源或商业许可，请联系作者
