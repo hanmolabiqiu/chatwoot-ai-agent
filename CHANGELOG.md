@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.8 (2026-06-05) — FastAdmin 用户端 + 支付激活闭环
+
+### 新增
+- **`fastadmin/chathub/`** — FastAdmin ThinkPHP 5 用户端插件 (11 文件 / 204K)
+  - **注册流程** — 选套餐 → 创建租户 → 调 chathub-provision 同步开通 → 写入 `embed_code`
+  - **支付激活闭环** — `_markOrderPaid()` 调 `_provisionAsync()` 补建资源, 避免 "付了款拿不到代码" 困境
+  - **`reprovision` action** — 用户主动重试 (登录后访问 `/addons/chathub/index/reprovision?ids={tenant_id}`)
+  - **`payReturn` smart redirect** — 3 分支: `?just_paid=1` (有资源) / `?provisioning=1` (付了款没资源) / `?pending=1` (订单未确认) / fallback `?order=X`
+  - **5 渠道绑定 UI** — `channelAuth` / `channelCallback` 完整 OAuth 流程 (Amazon/JD/Taobao/PDD/TikTok)
+  - **状态徽章** — 新增 `provisioning` 蓝 (#3b82f6), 完整状态机: pending→provisioning→active
+  - **`fa_chathub_order` 表** — 支付订单 + 续期
+  - **`fa_chathub_channel_account` 表** — AES-256-GCM 加密凭据 (5 平台)
+  - **`fa_chathub_gateway_log` 表** — Gateway 6 错误路径调用日志
+  - **`MIGRATIONS.md`** — v1.0 → v1.6 schema 升级脚本 (含 `provisioning` ENUM)
+- **`_initialize()` 白名单** — `reprovision` (user) + `payNotify`/`payReturn` (public webhook) 加入 FastAdmin action 白名单
+
+### 修复
+- **`payNotify` HTTP 500** — 两层 ENUM schema 同步问题:
+  1. `fa_chathub_tenant.status` ENUM 加 `provisioning` (`ALTER TABLE ... MODIFY COLUMN ...`)
+  2. `fa_chathub_log.status` 写入了非法值 `'received'`, 改为 `'success'`
+- **TP5 method signature bug** — `reprovision($ids = null)` 改 `$this->request->param('ids')` (TP5 不会自动注入 query string)
+- **支付流程 E2E 验证** — 4 项改动 (`_markOrderPaid`+`_provisionAsync`, `reprovision`, `payReturn` smart redirect, `provisioning` 状态徽章) 全部通过 E2E
+
+### 文件统计
+- `controller/Index.php` 1964 → 2108 行 (+144, +1 fix)
+- `install.sql` 2 张表 → 5 张表
+- 配置文件 17 个后台可填字段
+- `fastadmin/chathub/README.md` 完整安装/路由/状态机文档
+
+### 部署注意
+- 旧用户升级: 跑 `fastadmin/chathub/MIGRATIONS.md` 的 SQL
+- 新用户安装: 用 `fastadmin/chathub/install.sql` (5 张表)
+- FastAdmin 插件市场安装: 启用后到"插件管理 → ChatHub → 配置"填入 17 个字段
+
+---
+
 ## v1.7 (2026-06-05) — 对话上下文 + 客户画像 + 指数退避重连
 
 ### 新增

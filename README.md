@@ -227,8 +227,62 @@ chatwoot-ai-agent/
 ├── requirements.txt          # Python 依赖
 ├── chatwoot_auth.example.json # Session 认证文件模板
 ├── inboxes.example.json      # 路由配置模板
+├── fastadmin/                # FastAdmin 用户端 PHP 插件 (v1.8+)
+│   └── chathub/              # 用户注册/付费/会员中心 + 渠道绑定 UI
+│       ├── controller/Index.php   # 2108 行 (HTML 内联, 14 个 action)
+│       ├── model/ChathubTenant.php
+│       ├── config.php             # 17 个后台可填配置项
+│       ├── install.sql            # 5 张表 (tenant/log/order/channel_account/gateway_log)
+│       ├── MIGRATIONS.md          # v1.0 → v1.6 schema 升级脚本
+│       ├── assets/css|js/         # 样式 + 表格初始化
+│       └── README.md              # 安装 + 路由表 + 生命周期
 └── .gitignore
 ```
+
+## FastAdmin 用户端 (`fastadmin/chathub/`)
+
+PHP 前端 (ThinkPHP 5 / FastAdmin addon)，为整个系统提供用户面：注册 → 选套餐 → 支付 → 会员中心 → 渠道绑定。所有 HTML 都在 `controller/Index.php` 里以 PHP heredoc 形式内联，不依赖 FastAdmin 模板引擎。
+
+### 路由表
+
+| URL | Auth | 用途 |
+|---|---|---|
+| `/addons/chathub/index/landing` | public | 落地页 |
+| `/addons/chathub/index/register` | public | 注册 + 选套餐 |
+| `/addons/chathub/index/login` / `doLogin` / `logout` | public | 登录登出 |
+| `/addons/chathub/index/my` | user (session) | 会员中心 (租户列表 + 嵌入代码 + 重新开通) |
+| `/addons/chathub/index/channelList` / `channelAuth` / `channelCallback` | user | 5 平台渠道绑定 |
+| `/addons/chathub/index/reprovision` | user | 用户主动补建资源 |
+| `/addons/chathub/index/payAlipay` / `payWechat` | user | 发起支付 |
+| `/addons/chathub/index/payNotify` | public (webhook) | 支付宝/微信异步回调 (验签 + 开户) |
+| `/addons/chathub/index/payReturn` | public (webhook) | 支付宝/微信同步跳转 (3 分支 smart redirect) |
+
+### 与 chathub-provision 的契约
+
+`payNotify` 和 `register` 调用 `chathub-provision` 服务的 `/provision` 端点：
+
+```http
+POST {provision_server_url}/provision
+Headers: X-API-Key, Idempotency-Key, Content-Type: application/json
+Body:    {"name": "...", "domain": "...", "email": "...", "type": "web_widget", "max_agents": 3}
+```
+
+`Idempotency-Key` 用 `reprov-{tenant_id}-{md5(domain|channel_type)}` 计算，允许 PHP 重试时 chathub-provision 端去重 (5 分钟 TTL)。
+
+### 状态机
+
+```
+register  → status='provisioning' ─┬─ success → status='active' (embed_code 写入)
+                                   │
+                                   └─ failure → status='pending' (用户点"重新开通")
+
+payNotify → _markOrderPaid() + _provisionAsync() (若 embed_code 为空)
+            └─ success → status='active'
+
+reprovision → 用户主动重试
+```
+
+详见 `fastadmin/chathub/README.md`。
 
 ## 版本历史
 
@@ -242,6 +296,7 @@ chatwoot-ai-agent/
 | v1.5 | 消息防抖（5s 累积合并），AI 错误重试（指数退避）|
 | v1.6 | Platform Gateway 库——Amazon/JD/Taobao/PDD/TikTok 5 平台统一 API 集成 |
 | v1.7 | 对话上下文（`--session-id`）+ 对话摘要 + 客户画像 + WebSocket 指数退避重连 |
+| v1.8 | FastAdmin 用户端 PHP 插件 (`fastadmin/chathub/`) ——注册/选套餐/支付/会员中心/5 渠道绑定, 支付完成后自动调 chathub-provision 补建资源, 修复 `payNotify` HTTP 500 (ENUM schema + log status bug), 新增 `reprovision` 用户主动重试 |
 
 ## 许可证
 

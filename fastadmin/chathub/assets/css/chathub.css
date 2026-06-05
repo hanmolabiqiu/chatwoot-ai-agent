@@ -1,0 +1,203 @@
+/* ChatHub 租户管理样式 */
+
+:root {
+    --chathub-primary: #6366f1;
+    --chathub-primary-dark: #4f46e5;
+    --chathub-success: #10b981;
+    --chathub-warning: #f59e0b;
+    --chathub-danger: #ef4444;
+}
+
+/* 全局过渡效果 */
+.chathub-dashboard *,
+.chathub-list *,
+.chathub-form * {
+    transition: all 0.2s ease;
+}
+
+/* 加载动画 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .chathub-dashboard {
+        padding: 1rem;
+    }
+    
+    .chathub-header {
+        padding: 1.5rem;
+    }
+    
+    .chathub-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .channel-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 滚动条美化 */
+.chathub-dashboard::-webkit-scrollbar,
+.chathub-list::-webkit-scrollbar,
+.chathub-form::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.chathub-dashboard::-webkit-scrollbar-track,
+.chathub-list::-webkit-scrollbar-track,
+.chathub-form::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.chathub-dashboard::-webkit-scrollbar-thumb,
+.chathub-list::-webkit-scrollbar-thumb,
+.chathub-form::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.chathub-dashboard::-webkit-scrollbar-thumb:hover,
+.chathub-list::-webkit-scrollbar-thumb:hover,
+.chathub-form::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* 工具提示 */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* 表格行悬停效果 */
+.table tbody tr {
+    cursor: pointer;
+}
+
+.table tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* 状态徽章动画 */
+.status-badge {
+    transition: all 0.2s ease;
+}
+
+.status-badge:hover {
+    transform: scale(1.05);
+}
+
+/* 按钮加载状态 */
+.btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn.loading::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-left: 0.5rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 成功/失败动画 */
+.success-animation {
+    animation: successPulse 0.5s ease;
+}
+
+@keyframes successPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 空状态图标旋转 */
+.empty-state i {
+    transition: transform 0.3s ease;
+}
+
+.empty-state:hover i {
+    transform: rotate(10deg);
+}
