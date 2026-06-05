@@ -1,55 +1,36 @@
 # Changelog
 
-## v1.4 (2026-06-04) — 多租户开通 + 安全性重构
+## v1.4 (2026-06-05) — 消息防抖 + AI 重试
 
 ### 新增
-- **provison_server.py** — 555 行 HTTP API 服务，支持 /provision /suspend /activate 端点
-  - 自动创建 Chatwoot Inbox + Team + Agent 账号 + QwenPaw Agent + 路由配置
-  - Chatwoot Team 管理：每个租户创建独立团队，席位限制（max_agents 默认 3）
-  - 失败回滚：创建过程中出错自动删除已建资源
-  - X-API-Key 头部认证，Idempotency-Key 幂等性支持（5 分钟 TTL）
-  - Session 自动续期：expiry < 1h 时自动重新登录
-  - 401 自动重试 3 次，非 JSON 响应错误处理
-- **状态持久化** — WS Agent 每 30 秒保存 ai_sent_msg_ids / human_active_convs 到 JSON 文件，重启可恢复
-- **会议室模式** — 开发团队 Inbox 消息同时转发多个 AI，`[SKIP]` 机制防重复回复
-- **PIBSUB_TOKEN 三级 fallback** — 环境变量 → auth 文件 → login 响应，最后一级仅兜底尝试
-- **supervisor 托管** — [program:ws_agent] 自动重启，与旧版 start_agent.sh 解耦
+- **消息防抖 (Debounce)** — 同一会话 5 秒内到达的多条消息被自动累积合并，合并后发给 AI 一次处理，避免重复调用和混乱回复
+  - 累积消息用 `\n---\n` 分隔，AI 获得完整上下文
+  - 人工在此期间回复则跳过，兼容正常转人工流程
+  - 日志标记：`⏳ Debounce` / `📦 Debounce: processing N merged msgs`
+- **AI 错误重试 (Retry)** — `call_qwenpaw_ai()` 加入指数退避重试机制（最多 2 次重试，等待 1s/2s）
+  - 覆盖超时、空回复、非零返回码、任意 Exception
+  - 每步日志输出 retry 状态，最终失败标记 ERROR 级别
 
-### 修复
-- **硬编码凭证全面清除** — CW_EMAIL / CW_PASSWORD 改为环境变量必需，无默认 fallback
-- **双重 WebSocket 重连** — 删除 _reconnect()，改为 run_forever(reconnect=5) 自动管理
-- **内存泄漏** — ai_sent_msg_ids / processed_ids 无界增长，新增定期清理（上限 10000 条）
-- **INBOX_CONFIG KeyError 崩溃** — 缺失配置时改为 skip + log，不再崩溃
-- **PID 文件竞争** — /proc/PID/cmdline 验证，防止读取过期 PID
-- **Metrics 热路径** — _dirty 标记 + 30 秒 flush，避免每次记录写磁盘
-- **SIGTERM 优雅退出** — signal handler + save_state + metrics.flush
-- _validate_config 占位符校验（sender_name / customer_msg）
-- **幂等性正确实现** — 存储真实响应（含 HTTP 状态码），而非假 success
-- **_disable_inbox 注释说明** — Chatwoot API 无真 disable 字段，改用改名+清 channel 方案
-
-### 安全
-- 所有敏感信息改为环境变量：CW_BASE / CW_EMAIL / CW_PASSWORD / CW_PLATFORM_TOKEN / CHATHUB_API_KEY
-- .env.example 提供模板，.env / chatwoot_auth.json / inboxes.json 加入 .gitignore
-- 代码内无硬编码 URL、邮箱、密码、token
+### 改进
+- 调用方无需修改：`generate_ai_reply()`, `translate_to_chinese()` 自动受益于重试
+- 防抖不影响人工检测优先级（`is_human_active` 仍在防抖前检查）
 
 ---
 
-## v1.3 (2026-06-03) — 监控运维 + 代码清理
-
-### 新增
-- **Metrics 监控类** — 跟踪 WebSocket 连接状态、断连次数、每个 inbox 的 AI 回复成功率和响应时间
-- **DEFAULT_INBOX_CONFIG** — 硬编码兜底配置，`inboxes.json` 缺失时演示站仍正常工作
-- **配置验证** — `_validate_config()` 检查必要字段，不合规配置告警
-- **CLI 运维命令** — `--health`、`--metrics`、`--ws-status`、`--list-inboxes`、`--inbox-stats`、`--inbox-stats-csv`、`--inbox-stats-one-line`
-- **日志分级** — INFO / WARN / ERROR，写入 `/var/log/chatwoot_ws_agent.log`
+## v1.3 (2026-06-03) — 代码清理 + 监控 + 状态持久化
 
 ### 清理
-- 删除 30+ 个冗余 `--inbox-stats-*` argparse 变体，保留 4 个实用格式
+- 删除 30+ 冗余 argparse 参数（1374 行 → 1025 行）
 - 修复 f-string 嵌套引号语法错误
-- 净减 349 行代码（1374 → 1025 行）
+- 推送到 GitHub main 分支，打 v1.3 tag
 
-### 改进
-- README 更新至 v1.3，补全文件列表、CLI 文档、架构图
+### 新增
+- **Metrics 监控** — WebSocket 连接状态、断连次数、每个 inbox 的 AI 回复成功率与响应时间
+- **健康检查 CLI** — `--health` 参数输出 JSON 状态
+- **日志分级** — INFO / WARN / ERROR 级别，每个 inbox 独立日志标识
+- **状态持久化** — `ai_sent_msg_ids`、`human_active_convs`、`_ai_pending_convs` 每 30 秒写入 JSON 文件
+- **启动恢复** — 加载 1 小时内快照（安全兜底）
+- **配置验证** — `_validate_config()` 检查必要字段
 
 ---
 
