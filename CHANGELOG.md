@@ -1,6 +1,29 @@
 # Changelog
 
-## v1.4 (2026-06-05) — 消息防抖 + AI 重试
+## v1.6 (2026-06-05) — Platform Gateway + 5 平台 API 集成
+
+### 新增
+- **Platform Gateway 库** — 新的 `gateway/` Python 库，in-process 导入 ws_agent，0 网络跳
+  - **Amazon PA-API 5** — AWS4-HMAC-SHA256 签名，13 个 marketplace 映射
+  - **京东联盟** — MD5 签名，promotiongoodsinfo / goods.query 两个接口
+  - **淘宝 TOP API** — MD5 签名，item.get / tbk.item.search 两个接口
+  - **拼多多 DDK** — MD5 签名，ddk.goods.search / ddk.goods.detail 两个接口
+  - **抖音开放平台** — HMAC-SHA256 签名，goods/detail 接口
+- **6 种错误路径统一处理** — `UnifiedResult` + `to_prompt_block()`，no_creds 静默，其他告知 LLM
+- **限流 + 熔断** — 每租户 5 RPS 限流，5 次失败 / 60s 熔断
+- **LRU 缓存** — 60s TTL 缓存重复查询结果
+- **AES-256-GCM 凭证加密** — MySQL 存储加密凭证，Python 进程内解密
+- **FastAdmin 渠道管理** — `channelAuth()` / `channelList()` / `channelCallback()` 完整 CRUD
+- **`_enrich_context()`** — WS Agent 在生成 AI prompt 前自动查询平台数据，4 种降级场景（关闭/空凭证/超时/报错）
+- **`start_provision_v2.sh`** — 环境变量 wrapper（GATEWAY_AES_KEY + CHATHUB_DB_*）
+
+### 架构
+- `gateway/ARCHITECTURE.md` — 199 行 9 章节设计文档（库 vs 服务对比、签名算法、错误路径表）
+- 13 个 Python 文件，1437 LOC
+
+---
+
+## v1.5 (2026-06-05) — 消息防抖 + AI 重试
 
 ### 新增
 - **消息防抖 (Debounce)** — 同一会话 5 秒内到达的多条消息被自动累积合并，合并后发给 AI 一次处理，避免重复调用和混乱回复
@@ -14,6 +37,32 @@
 ### 改进
 - 调用方无需修改：`generate_ai_reply()`, `translate_to_chinese()` 自动受益于重试
 - 防抖不影响人工检测优先级（`is_human_active` 仍在防抖前检查）
+
+---
+
+## v1.4 (2026-06-05) — 多租户开通 + 安全性重构 + 数据脱敏
+
+### 新增
+- **provision_server HTTP 服务** — Bottle 框架，端口 5566，session 4-header 认证
+- **Chatwoot 团队自动创建** — 每个租户创建 `"{店铺名} 客服团队"`，默认 3 席位
+- **API Key 认证** — 所有 POST 端点需 `X-API-Key` 头部（env `CHATHUB_API_KEY`，默认 `chathub-default-key-change-me`）
+- **幂等性支持** — `Idempotency-Key` 头，重复请求返回缓存原始响应
+- **Chatwoot session 自动续期** — expiry < 1h 时自动重新登录
+- **禁用 Inbox 机制** — 改名 + 清 channel + 关欢迎语（Chatwoot API 无真 disable）
+
+### 安全重构
+- 删除全部硬编码密钥：`CW_ADMIN_EMAIL`、`CW_ADMIN_PASSWORD`、`CW_PUBSUB_TOKEN` 均从环境变量读取
+- `CW_ADMIN_EMAIL`/`CW_ADMIN_PASSWORD` 无 fallback，缺失抛异常
+- PUBSUB_TOKEN 三级 fallback：env → auth file → login 响应，仍缺失抛异常
+- 401 自动重试（最多 3 次）
+- `print()` 全部替换为 `logging`
+
+### 改进
+- WS Agent 通过 supervisor `[program:ws_agent]` 管理，自动重启
+- metrics 改用 `_dirty` 标记，每 30s flush，避免热路径 IO
+- SIGTERM 优雅退出（signal handler → save_state → flush）
+- PID 文件竞争通过 `/proc/PID/cmdline` 验证
+- `_validate_config` 占位符校验（`{sender_name}` / `{customer_msg}`）
 
 ---
 

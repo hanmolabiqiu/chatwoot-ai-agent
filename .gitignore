@@ -3,6 +3,7 @@ inboxes.json
 .chatwoot_ws_state.json
 .chatwoot_ws_processed.json
 .chatwoot_ws_metrics.json
+gateway/__pycache__/
 __pycache__/
 *.pyc
 .env

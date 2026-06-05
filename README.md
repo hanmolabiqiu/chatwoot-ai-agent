@@ -5,18 +5,24 @@
 ## 架构概览
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    QwenPaw Agent                      │
-│  ┌─────────────────────┐  ┌──────────────────────┐   │
-│  │   WS Agent           │  │  Provision Server     │   │
-│  │   (WebSocket 长连接)  │  │  (HTTP API :5566)     │   │
-│  │   • 接收实时消息       │  │  • 自动开通租户        │   │
-│  │   • AI 自动回复        │  │  • 创建 Inbox/Team   │   │
-│  │   • 人工/AI 切换       │  │  • 创建 AI Agent     │   │
-│  │   • 多 Inbox 路由      │  │  • 写入路由配置       │   │
-│  └─────────┬─────────────┘  └──────────┬───────────┘   │
-│            │                           │               │
-└────────────┼───────────────────────────┼───────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         QwenPaw Agent                           │
+│  ┌─────────────────────┐  ┌──────────────────────┐              │
+│  │   WS Agent           │  │  Provision Server     │              │
+│  │   (WebSocket 长连接)  │  │  (HTTP API :5566)     │              │
+│  │   • 接收实时消息       │  │  • 自动开通租户        │              │
+│  │   • AI 自动回复        │  │  • 创建 Inbox/Team   │              │
+│  │   • 人工/AI 切换       │  │  • 创建 AI Agent     │              │
+│  │   • 5s 防抖 + 重试    │  │  • 写入路由配置       │              │
+│  │   • 多 Inbox 路由      │  └──────────┬───────────┘              │
+│  └─────────┬─────────────┘             │                         │
+│            │                           │                         │
+│  ┌─────────▼───────────────────────────▼───────────────────┐     │
+│  │              Platform Gateway（13 文件，1437 LOC）       │     │
+│  │   Amazon │ 京东 │ 淘宝 │ 拼多多 │ 抖音 — 统一接口      │     │
+│  │   AES-256-GCM 凭证加密 · 限流/熔断/缓存 · 6 种错误路径  │     │
+│  └──────────────────────────────────────────────────────────┘     │
+└───────────────────────────────────────────────────────────────────┘
              │ WebSocket (wss)           │ HTTP API
              ▼                           ▼
     ┌────────────────┐        ┌──────────────────┐
@@ -170,10 +176,26 @@ python3 provision_server.py
 
 ```
 chatwoot-ai-agent/
-├── chatwoot_ws_agent.py      # WebSocket AI Agent（核心，1147 行）
+├── chatwoot_ws_agent.py      # WebSocket AI Agent（核心，1294 行）
 ├── provision_server.py       # HTTP 开通服务（555 行）
+├── start_provision_v2.sh     # Provision Server 环境变量 wrapper
 ├── chatwoot_ws_ctl.sh        # 进程管理脚本
 ├── start_agent.sh            # 启动脚本（旧，推荐用 supervisor）
+├── gateway/                  # Platform Gateway 库（5 平台 API 集成）
+│   ├── __init__.py           # 入口 + 6 种错误路径统一处理
+│   ├── base.py               # 基础通道抽象类 + 限流/熔断
+│   ├── amazon.py             # Amazon PA-API 5（AWS4-HMAC-SHA256）
+│   ├── jd.py                 # 京东联盟（MD5 签名）
+│   ├── taobao.py             # 淘宝 TOP API（MD5 签名）
+│   ├── pdd.py                # 拼多多 DDK（MD5 签名）
+│   ├── tiktok.py             # 抖音开放平台（HMAC-SHA256）
+│   ├── router.py             # 渠道路由 + 缓存
+│   ├── credentials.py        # 凭证管理（MySQL 读取）
+│   ├── crypto.py             # AES-256-GCM 加密/解密
+│   ├── breaker.py            # 熔断器 + 限流器
+│   ├── cache.py              # LRU 缓存（60s TTL）
+│   ├── loop.py               # 异步事件桥接（BackgroundLoop）
+│   └── ARCHITECTURE.md       # 199 行设计文档
 ├── .env.example              # 环境变量模板
 ├── requirements.txt          # Python 依赖
 ├── chatwoot_auth.example.json # Session 认证文件模板
@@ -189,7 +211,9 @@ chatwoot-ai-agent/
 | v1.1 | Amazon API 集成，人工/AI 切换修复 |
 | v1.2 | 热加载配置架构 |
 | v1.3 | 代码清理优化，Metrics 监控 |
-| v1.4 | 多租户架构，Provision Server，状态持久化，安全性修复 |
+| v1.4 | 多租户架构，Provision Server，状态持久化，安全性重构 |
+| v1.5 | 消息防抖（5s 累积合并），AI 错误重试（指数退避）|
+| v1.6 | Platform Gateway 库——Amazon/JD/Taobao/PDD/TikTok 5 平台统一 API 集成 |
 
 ## 许可证
 
