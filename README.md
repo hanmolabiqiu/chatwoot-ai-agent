@@ -132,6 +132,33 @@ AI 使用 **User Session** 发消息（不让客户察觉是 AI），通过追�
           加入 conv_id    conv_id 加入                 conv_id 被清理
 ```
 
+## Platform Gateway（电商平台 API 集成）
+
+WS Agent 内置 `gateway/` 库，在生成 AI prompt 前自动查询电商平台数据（商品价格、库存等），将结果注入上下文。
+
+### 支持的平台
+| 平台 | 协议 | 签名算法 |
+|------|------|---------|
+| Amazon | PA-API 5 | AWS4-HMAC-SHA256 |
+| 京东 | 联盟 API | MD5 |
+| 淘宝 | TOP API | MD5 |
+| 拼多多 | DDK API | MD5 |
+| 抖音 | 开放平台 | HMAC-SHA256 |
+
+### 6 种错误路径
+`no_creds`（静默降级）→ `error` / `timeout` / `rate_limited` / `breaker_open` → `success`
+
+### 配置
+```bash
+export GATEWAY_ENABLED=1                 # 默认开启，0=关闭
+export CHATHUB_DB_HOST=localhost         # MySQL 存储凭证
+export CHATHUB_DB_USER=root
+export CHATHUB_DB_PASS=your-password
+export GATEWAY_AES_KEY=32-byte-base64-key  # AES-256-GCM 加密凭证
+```
+
+详见 `gateway/ARCHITECTURE.md`。
+
 ## 快速开始
 
 ```bash
